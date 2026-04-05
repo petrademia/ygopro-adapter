@@ -5749,17 +5749,22 @@ namespace ygopro
         auto player = read_u8();
         auto size = read_u8();
         auto spe_count = read_u8();
-        bool forced = read_u8();
-        dp_ += 8;
-        // auto hint_timing = read_u32();
-        // auto other_timing = read_u32();
+        bool forced = false;
+        auto hint_timing = read_u32();
+        auto other_timing = read_u32();
+        (void)hint_timing;
+        (void)other_timing;
 
         std::vector<CardCode> codes;
         std::vector<uint32_t> descs;
         std::vector<std::string> specs;
+        std::vector<uint8_t> flags;
         for (int i = 0; i < size; ++i)
         {
           auto flag = read_u8();
+          auto is_forced = read_u8();
+          flags.push_back(flag);
+          forced = forced || (is_forced != 0);
           CardCode code = read_u32();
           codes.push_back(code);
           PlayerId c = read_u8();
@@ -5804,10 +5809,15 @@ namespace ygopro
           CardCode code = codes[i];
           uint32_t desc = descs[i];
           auto spec = specs[i];
+          auto flag = flags[i];
           auto [code_d, eff_idx] = unpack_desc(code, desc);
           if (desc == 0)
           {
             code_d = code;
+          }
+          if (flag == EDESC_OPERATION || flag == EDESC_RESET)
+          {
+            code_d = 0;
           }
           auto la = LegalAction::activate_spec(eff_idx, spec);
           maybe_set_action_cid(la, code_d, "select_chain", msg_, desc);
